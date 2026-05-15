@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.geometry.*?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cliente.presentation.controller.PanelController"
+      styleClass="view-root" spacing="24">
+    <padding><Insets top="32" right="32" bottom="32" left="32"/></padding>
+
+    <!-- Header -->
+    <VBox spacing="4">
+        <Label text="Panel" styleClass="view-title"/>
+        <Label text="Resumen del estado de conexión y actividad del sistema."
+               styleClass="view-subtitle"/>
+    </VBox>
+
+    <!-- Status card -->
+    <VBox styleClass="info-card" spacing="16">
+        <HBox spacing="12" alignment="CENTER_LEFT">
+            <Circle fx:id="statusDot" radius="7" styleClass="status-dot-online"/>
+            <Label fx:id="statusLabel" text="—" styleClass="info-card-status"/>
+        </HBox>
+
+        <GridPane hgap="40" vgap="12">
+            <columnConstraints>
+                <ColumnConstraints prefWidth="180"/>
+                <ColumnConstraints prefWidth="240"/>
+            </columnConstraints>
+
+            <Label text="ID de Cliente"     styleClass="info-key"   GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <Label fx:id="clientIdLabel"    styleClass="info-value" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+            <Label text="Servidor"          styleClass="info-key"   GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+            <Label fx:id="hostLabel"        styleClass="info-value" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+            <Label text="Puerto"            styleClass="info-key"   GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+            <Label fx:id="portLabel"        styleClass="info-value" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+            <Label text="Protocolo"         styleClass="info-key"   GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+            <Label fx:id="protocolLabel"    styleClass="info-value" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+        </GridPane>
+    </VBox>
+
+    <!-- Quick-nav cards -->
+    <HBox spacing="16">
+        <VBox styleClass="quick-card" spacing="8" HBox.hgrow="ALWAYS">
+            <Label text="👤  Clientes" styleClass="quick-card-title"/>
+            <Label text="Gestione los clientes conectados al servidor."
+                   styleClass="quick-card-body" wrapText="true"/>
+        </VBox>
+        <VBox styleClass="quick-card" spacing="8" HBox.hgrow="ALWAYS">
+            <Label text="📁  Documentos" styleClass="quick-card-title"/>
+            <Label text="Consulte, descargue y suba archivos al servidor."
+                   styleClass="quick-card-body" wrapText="true"/>
+        </VBox>
+        <VBox styleClass="quick-card" spacing="8" HBox.hgrow="ALWAYS">
+            <Label text="☰  Logs" styleClass="quick-card-title"/>
+            <Label text="Revise el registro de actividad técnica del sistema."
+                   styleClass="quick-card-body" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+</VBox>

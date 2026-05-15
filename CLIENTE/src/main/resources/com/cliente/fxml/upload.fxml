@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cliente.presentation.controller.UploadController"
+      styleClass="view-root" spacing="20">
+    <padding><Insets top="32" right="32" bottom="32" left="32"/></padding>
+
+    <!-- Header -->
+    <VBox spacing="4">
+        <Label text="Subir Archivo" styleClass="view-title"/>
+        <Label text="Seleccione o arrastre los archivos que desea cargar al servidor."
+               styleClass="view-subtitle"/>
+    </VBox>
+
+    <!-- Destinatario unicast -->
+    <VBox spacing="4">
+        <Label text="Destinatario (vacío = todos)" styleClass="section-label"/>
+        <TextField fx:id="destinatarioField"
+                   promptText="ID del cliente destino (dejar vacío para broadcast)"
+                   styleClass="text-field"/>
+    </VBox>
+
+    <!-- Drop zone -->
+    <VBox fx:id="dropZone" styleClass="drop-zone" alignment="CENTER" spacing="12"
+          prefHeight="160">
+        <Label text="Arrastre archivos aquí" styleClass="drop-zone-label"/>
+        <Button text="Seleccionar Archivo" onAction="#handleSelectFile"
+                styleClass="btn-secondary"/>
+    </VBox>
+
+    <!-- Action buttons -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="cancelButton" text="Cancelar"
+                onAction="#handleCancel" styleClass="btn-outline"/>
+        <Button fx:id="uploadButton" text="Subir"
+                onAction="#handleUpload" styleClass="btn-primary"/>
+    </HBox>
+
+    <!-- Upload queue -->
+    <VBox spacing="8" VBox.vgrow="ALWAYS">
+        <HBox alignment="CENTER_LEFT" spacing="12">
+            <Label text="COLA DE SUBIDA" styleClass="section-label"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="queueCount" styleClass="status-label"/>
+        </HBox>
+
+        <TableView fx:id="uploadTable" VBox.vgrow="ALWAYS" styleClass="data-table">
+            <columns>
+                <TableColumn fx:id="colFileName" text="NOMBRE"         prefWidth="300"/>
+                <TableColumn fx:id="colFileSize" text="TAMAÑO"         prefWidth="110"/>
+                <TableColumn fx:id="colStatus"   text="ESTADO/PROGRESO" prefWidth="200"/>
+            </columns>
+        </TableView>
+    </VBox>
+
+</VBox>

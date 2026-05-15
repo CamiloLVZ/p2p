@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.cliente.presentation.controller.MainController"
+            prefWidth="1200" prefHeight="750">
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <left>
+        <VBox styleClass="sidebar" prefWidth="232" minWidth="232">
+
+            <!-- Brand -->
+            <VBox styleClass="sidebar-brand-box" spacing="2">
+                <Label text="⊞  SOCKET CLIENT" styleClass="sidebar-brand"/>
+            </VBox>
+
+            <!-- Nav items -->
+            <VBox spacing="0">
+                <Button fx:id="btnPanel"    text="⊞   Panel"
+                        onAction="#showPanel"    maxWidth="Infinity"
+                        styleClass="nav-item" alignment="CENTER_LEFT"/>
+                <Button fx:id="btnClients"  text="👤   Gestión de Clientes"
+                        onAction="#showClients"  maxWidth="Infinity"
+                        styleClass="nav-item" alignment="CENTER_LEFT"/>
+                <Button fx:id="btnFiles"    text="📁   Archivos Disponibles"
+                        onAction="#showFiles"    maxWidth="Infinity"
+                        styleClass="nav-item" alignment="CENTER_LEFT"/>
+                <Button fx:id="btnMessages" text="✉   Mensajes Disponibles"
+                        onAction="#showMessages" maxWidth="Infinity"
+                        styleClass="nav-item" alignment="CENTER_LEFT"/>
+                <Button fx:id="btnLogs"     text="☰   Logs"
+                        onAction="#showLogs"     maxWidth="Infinity"
+                        styleClass="nav-item" alignment="CENTER_LEFT"/>
+                <Button fx:id="btnServidores" text="⊕   Servidores"
+                        onAction="#showServidores" maxWidth="Infinity"
+                        styleClass="nav-item" alignment="CENTER_LEFT"/>
+            </VBox>
+
+            <!-- Spacer -->
+            <Region VBox.vgrow="ALWAYS"/>
+
+            <!-- Bottom actions -->
+            <VBox styleClass="sidebar-bottom" spacing="4">
+                <Button text="⬆  SUBIR ARCHIVO"
+                        onAction="#showUpload"
+                        maxWidth="Infinity"
+                        styleClass="btn-upload-sidebar"/>
+                <Button text="▶  Enviar Mensaje"
+                        onAction="#showSendMessage"
+                        maxWidth="Infinity"
+                        styleClass="btn-link-sidebar"/>
+                <Button text="⏻  Terminar Conexión"
+                        onAction="#handleDisconnect"
+                        maxWidth="Infinity"
+                        styleClass="btn-danger-link-sidebar"/>
+            </VBox>
+
+        </VBox>
+    </left>
+
+    <!-- ═══ CONTENT AREA ═══ -->
+    <center>
+        <StackPane fx:id="contentArea" styleClass="content-area"/>
+    </center>
+
+</BorderPane>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cliente.presentation.controller.FilesController"
+      styleClass="view-root" spacing="20">
+    <padding><Insets top="32" right="32" bottom="32" left="32"/></padding>
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <VBox spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Archivos Disponibles" styleClass="view-title"/>
+            <Label text="Documentos almacenados en el servidor."
+                   styleClass="view-subtitle"/>
+        </VBox>
+        <Label fx:id="statusLabel" styleClass="status-label"/>
+        <Button fx:id="refreshButton" text="↻  Actualizar"
+                onAction="#handleRefresh" styleClass="btn-secondary"/>
+        <Button fx:id="downloadButton" text="⬇  Descargar"
+                onAction="#handleDownload" styleClass="btn-primary"/>
+    </HBox>
+
+    <!-- Table -->
+    <TableView fx:id="filesTable" VBox.vgrow="ALWAYS" styleClass="data-table">
+        <columns>
+            <TableColumn fx:id="colName" text="Nombre"     prefWidth="240"/>
+            <TableColumn fx:id="colSize" text="Tamaño"     prefWidth="100"/>
+            <TableColumn fx:id="colType" text="Tipo"       prefWidth="90"/>
+            <TableColumn fx:id="colDate" text="Fecha"      prefWidth="150"/>
+            <TableColumn fx:id="colHash" text="SHA-256"    prefWidth="180"/>
+        </columns>
+    </TableView>
+
+</VBox>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cliente.presentation.controller.ConnectionController"
+      styleClass="connection-root"
+      alignment="CENTER" spacing="0">
+
+    <VBox styleClass="connection-card" spacing="24" maxWidth="400" minWidth="360">
+
+        <!-- Header -->
+        <VBox spacing="6" alignment="CENTER">
+            <Label text="⊞" styleClass="connection-logo"/>
+            <Label text="Cliente JavaFX" styleClass="connection-title"/>
+            <Label text="Conexión al servidor mediante sockets" styleClass="connection-subtitle"/>
+        </VBox>
+
+        <!-- Username Field -->
+        <VBox spacing="6">
+            <Label text="Nombre de Usuario" styleClass="field-label"/>
+            <TextField fx:id="usernameField" promptText="Ej: usuario1" styleClass="field-input"/>
+        </VBox>
+
+        <!-- IP Field -->
+        <VBox spacing="6">
+            <Label text="Dirección IP del Servidor" styleClass="field-label"/>
+            <TextField fx:id="ipField" promptText="Ej: 192.168.1.100" styleClass="field-input"/>
+        </VBox>
+
+        <!-- Port Field -->
+        <VBox spacing="6">
+            <Label text="Puerto" styleClass="field-label"/>
+            <TextField fx:id="portField" promptText="Ej: 8080" styleClass="field-input"/>
+        </VBox>
+
+        <!-- Protocol ComboBox -->
+        <VBox spacing="6">
+            <Label text="Protocolo de Comunicación" styleClass="field-label"/>
+            <ComboBox fx:id="protocolCombo" maxWidth="Infinity" styleClass="field-input"/>
+        </VBox>
+
+        <!-- Error label -->
+        <Label fx:id="errorLabel" styleClass="error-label" wrapText="true" maxWidth="Infinity" visible="false"/>
+
+        <!-- Progress -->
+        <ProgressIndicator fx:id="progressIndicator" prefHeight="28" prefWidth="28"
+                           styleClass="progress-indicator" visible="false"
+                           VBox.vgrow="NEVER"/>
+
+        <!-- Connect button -->
+        <Button fx:id="connectButton" text="Conectar" onAction="#handleConnect"
+                maxWidth="Infinity" styleClass="btn-primary"/>
+
+    </VBox>
+</VBox>

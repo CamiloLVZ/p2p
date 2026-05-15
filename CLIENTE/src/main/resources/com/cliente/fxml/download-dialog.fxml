@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cliente.presentation.controller.DownloadDialogController"
+      styleClass="dialog-root" spacing="20" prefWidth="400">
+    <padding><Insets top="24" right="28" bottom="24" left="28"/></padding>
+
+    <!-- File info -->
+    <VBox spacing="4">
+        <Label text="ARCHIVO SELECCIONADO" styleClass="dialog-section-label"/>
+        <Label fx:id="fileNameLabel" text="—" styleClass="dialog-filename"/>
+    </VBox>
+
+    <Separator/>
+
+    <!-- Mode selection -->
+    <VBox spacing="12">
+        <Label text="Seleccionar Modalidad:" styleClass="field-label"/>
+
+        <VBox styleClass="radio-option" spacing="4">
+            <RadioButton fx:id="radioOriginal" text="Original" styleClass="radio-title"/>
+            <Label text="Descarga directa sin modificaciones"
+                   styleClass="radio-desc" style="-fx-padding: 0 0 0 24;"/>
+        </VBox>
+
+        <VBox styleClass="radio-option" spacing="4">
+            <RadioButton fx:id="radioHash" text="Con Hash" styleClass="radio-title"/>
+            <Label text="Incluye suma de comprobación SHA-256"
+                   styleClass="radio-desc" style="-fx-padding: 0 0 0 24;"/>
+        </VBox>
+
+        <VBox styleClass="radio-option" spacing="4">
+            <RadioButton fx:id="radioEncrypted" text="Encriptado" styleClass="radio-title"/>
+            <Label text="Cifrado AES-256 automático"
+                   styleClass="radio-desc" style="-fx-padding: 0 0 0 24;"/>
+        </VBox>
+    </VBox>
+
+    <!-- Progress -->
+    <ProgressBar fx:id="progressBar" maxWidth="Infinity" prefHeight="8" visible="false"/>
+    <Label fx:id="statusLabel" styleClass="status-label" wrapText="true" visible="false"/>
+
+    <Separator/>
+
+    <!-- Buttons -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Cancelar" onAction="#handleCancel" styleClass="btn-outline"/>
+        <Button fx:id="downloadButton" text="Descargar" onAction="#handleDownload"
+                styleClass="btn-primary"/>
+    </HBox>
+
+</VBox>
