@@ -6,7 +6,6 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.logging.Logger;
 
@@ -68,15 +67,98 @@ public class StreamReceptorTcp {
 
         LOGGER.info("StreamReceptorTcp: iniciando recepción de chunks");
 
-        // Guarda el último estado S2S visto para poder finalizarlo en EOF
         EstadoTransferencia ultimoEstadoS2S = null;
 
-        // Primer header — necesario para resolver el transferId con retry
-        byte[] primerHeader = leerExacto(is, HEADER_LEN);
-        if (primerHeader == null) {
-            LOGGER.info("StreamReceptorTcp: conexión cerrada por el cliente antes de enviar chunks");
-            return;
+        // Abrir el FileChannel UNA sola vez para toda la transferencia.
+        // Antes se abría y cerraba por cada chunk — 1500 syscalls open/close para 1 GB.
+        // Ahora se mantiene abierto en append hasta que terminen todos los chunks.
+        EstadoTransferencia estadoInicial = null;
+        FileChannel fc = null;
+
+        try {
+            while (true) {
+                byte[] header = leerExacto(is, HEADER_LEN);
+                if (header == null) {
+                    LOGGER.info("StreamReceptorTcp: conexión cerrada por el cliente (EOF)");
+                    if (ultimoEstadoS2S != null && gestorTransferencias.existe(ultimoEstadoS2S.getTransferId())) {
+                        gestorTransferencias.finalizarTransferenciaS2S(ultimoEstadoS2S.getTransferId());
+                    }
+                    break;
+                }
+
+                String transferId = new String(header, 0, TRANSFER_ID_LEN, java.nio.charset.StandardCharsets.UTF_8);
+                ByteBuffer buf = ByteBuffer.wrap(header, TRANSFER_ID_LEN, 12);
+                long chunkIndex = buf.getLong();
+                int chunkSize   = buf.getInt();
+
+                if (chunkSize <= 0 || chunkSize > 8 * 1024 * 1024) {
+                    LOGGER.warning(() -> "StreamReceptorTcp: chunkSize inválido: " + chunkSize);
+                    os.write(NACK);
+                    os.flush();
+                    break;
+                }
+
+                EstadoTransferencia estado = gestorTransferencias.obtener(transferId.trim());
+                if (estado == null) {
+                    LOGGER.warning(() -> "StreamReceptorTcp: transferId no encontrado: " + transferId);
+                    os.write(NACK);
+                    os.flush();
+                    break;
+                }
+
+                if (estado.isEsReplicacionS2S()) {
+                    ultimoEstadoS2S = estado;
+                }
+
+                // Abrir el FileChannel la primera vez (o si cambia la transferencia)
+                if (fc == null || estadoInicial != estado) {
+                    if (fc != null) {
+                        fc.close();
+                    }
+                    fc = FileChannel.open(estado.getRutaTemporal(),
+                            StandardOpenOption.WRITE, StandardOpenOption.APPEND);
+                    estadoInicial = estado;
+                }
+
+                byte[] datos = leerExacto(is, chunkSize);
+                if (datos == null) {
+                    LOGGER.warning(() -> "StreamReceptorTcp: EOF inesperado leyendo datos del chunk " + chunkIndex);
+                    os.write(NACK);
+                    os.flush();
+                    break;
+                }
+
+                // Escribir al FileChannel ya abierto — sin open/close por chunk
+                ByteBuffer dataBuf = ByteBuffer.wrap(datos);
+                while (dataBuf.hasRemaining()) {
+                    fc.write(dataBuf);
+                }
+
+                estado.actualizarDigest(datos);
+                estado.registrarChunk(chunkSize);
+
+                LOGGER.fine(() -> "Chunk recibido: " + chunkIndex + "/" + (estado.getTotalChunks() - 1)
+                        + " | transferId: " + transferId.trim()
+                        + " | bytes: " + chunkSize);
+
+                os.write(ACK);
+                os.flush();
+
+                if (estado.estaCompleta()) {
+                    LOGGER.info(() -> "StreamReceptorTcp: todos los chunks recibidos para " + transferId.trim());
+                    if (estado.isEsReplicacionS2S()) {
+                        gestorTransferencias.finalizarTransferenciaS2S(transferId.trim());
+                    }
+                    break;
+                }
+            }
+        } finally {
+            // Garantizar que el FileChannel se cierre siempre, incluso en error
+            if (fc != null) {
+                try { fc.close(); } catch (Exception ignored) {}
+            }
         }
+    }
 
         String transferId = new String(primerHeader, 0, TRANSFER_ID_LEN,
                 java.nio.charset.StandardCharsets.UTF_8).trim();

@@ -2,9 +2,9 @@ package com.arquitectura.aplicacion.transferencia;
 
 import com.arquitectura.dominio.repositorios.ArchivoRecibidoRepository;
 import com.arquitectura.dominio.repositorios.JpaArchivoRecibidoRepository;
-import com.arquitectura.infraestructura.seguridad.CryptoUtil;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -126,9 +126,12 @@ public class GestorTransferencias {
         }
 
         try {
-            byte[] bytes = Files.readAllBytes(rutaTemporal);
-            String hashSha256 = CryptoUtil.sha256Base64(bytes);
-            String contenidoCifrado = CryptoUtil.aesEncryptBase64(bytes);
+            // Calcular hash SHA-256 por streaming — NO leer todo el archivo a RAM.
+            // Para archivos de 1+ GB, Files.readAllBytes() provoca OOM y además
+            // el INSERT en MySQL supera el max_allowed_packet.
+            String hashSha256 = sha256Base64Streaming(rutaTemporal);
+            // No ciframos contenido para archivos grandes — lo mismo que FinalizarStreamHandler.
+            String contenidoCifrado = "";
 
             Path rutaFinal = resolverRutaFinalS2S(estado);
             Files.move(rutaTemporal, rutaFinal);
@@ -196,6 +199,22 @@ public class GestorTransferencias {
     private String extraerNombreBase(String nombre) {
         int dot = nombre.lastIndexOf('.');
         return (dot > 0) ? nombre.substring(0, dot) : nombre;
+    }
+
+    /**
+     * Calcula el hash SHA-256 de un archivo leyéndolo en chunks de 2 MB.
+     * Nunca carga el archivo completo en RAM — seguro para archivos de cualquier tamaño.
+     */
+    private String sha256Base64Streaming(Path archivo) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] buffer = new byte[2 * 1024 * 1024];
+        try (InputStream is = Files.newInputStream(archivo)) {
+            int n;
+            while ((n = is.read(buffer)) != -1) {
+                digest.update(buffer, 0, n);
+            }
+        }
+        return Base64.getEncoder().encodeToString(digest.digest());
     }
 
     /**
