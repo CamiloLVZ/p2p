@@ -44,7 +44,13 @@ public class ListarDocumentosHandler implements Handler<Object> {
             for (ArchivoRecibidoModel a : archivos) {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", a.getId());
-                map.put("name", a.getNombreArchivo());
+                // Reconstruir nombre completo con extensión para que la vista lo muestre correctamente
+                String nombreCompleto = a.getNombreArchivo();
+                if (a.getExtension() != null && !a.getExtension().isBlank()
+                        && !nombreCompleto.endsWith("." + a.getExtension())) {
+                    nombreCompleto = nombreCompleto + "." + a.getExtension();
+                }
+                map.put("name", nombreCompleto);
                 map.put("size", a.getTamano());
                 map.put("type", a.getExtension());
                 map.put("date", a.getFechaRecepcion() != null ? a.getFechaRecepcion().toString() : "");

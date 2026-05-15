@@ -134,12 +134,17 @@ public class FileService {
                 int    snapshotPort = conn.getPort();
                 String snapshotHash = hashFinal;
                 String snapshotUser = conn.getUsername();
-                byte[] snapshotBytes;
-                try {
-                    snapshotBytes = Files.readAllBytes(file.toPath());
-                } catch (Exception ex) {
-                    LOG.log(Level.WARNING, "No se pudo leer el archivo para guardarlo en H2: " + ex.getMessage(), ex);
-                    snapshotBytes = null;
+                // Solo cachear en H2 si el archivo es pequeño (< 50 MB).
+                // Para archivos grandes, guardar el registro sin contenido binario —
+                // el servidor ya tiene el archivo y la descarga se hace desde allí.
+                final long LIMITE_CACHE_BYTES = 50L * 1024 * 1024;
+                byte[] snapshotBytes = null;
+                if (fileSize <= LIMITE_CACHE_BYTES) {
+                    try {
+                        snapshotBytes = Files.readAllBytes(file.toPath());
+                    } catch (Exception ex) {
+                        LOG.log(Level.WARNING, "No se pudo leer el archivo para guardarlo en H2: " + ex.getMessage(), ex);
+                    }
                 }
                 final byte[] contenidoFinal = snapshotBytes;
 
