@@ -63,75 +63,116 @@ public class EnviarArchivoHandler implements Handler<PayloadEnviarArchivo> {
                 && !payload.getClientIdDestino().isBlank())
                 ? payload.getClientIdDestino().trim() : null;
 
+        GestorServidoresPeer gestorPeers = GestorServidoresPeer.getInstance();
+
+        // --- Determinar si el destinatario es local o está en otro peer ---
+        // Esto se evalúa ANTES de guardar en disco para evitar almacenar archivos
+        // que no corresponden a este servidor (unicast para cliente remoto).
+        boolean esUnicast = clientIdDestino != null;
+        boolean destinatarioLocal = !esUnicast || gestorSesiones.existeSesionActiva(clientIdDestino);
+        String peerDestinoId = null;
+
+        if (esUnicast && !destinatarioLocal) {
+            peerDestinoId = encontrarPeerDeCliente(clientIdDestino, gestorPeers);
+            if (peerDestinoId == null) {
+                // Destinatario desconocido en toda la red — igual guardar localmente
+                // como fallback para que el cliente pueda buscarlo cuando se conecte.
+                LOGGER.warning(() -> "Destinatario [" + clientIdDestino
+                        + "] no encontrado en peers conocidos — archivo guardado localmente como fallback");
+                destinatarioLocal = true;
+            }
+        }
+
         try {
             Path rutaArchivo = guardarArchivo(payload, contenidoArchivo);
             String nombreFinalArchivo = rutaArchivo.getFileName().toString();
 
-            // Persistir con destinatario (null = broadcast, valor = unicast)
-            archivoRecibidoRepository.guardar(
-                    mensajeId,
-                    remitente,
-                    ipRemitente,
-                    extraerNombreBase(nombreFinalArchivo),
-                    extraerExtension(nombreFinalArchivo),
-                    rutaArchivo.toAbsolutePath().toString(),
-                    hashSha256,
-                    contenidoCifrado,
-                    payload.getTamano(),
-                    fechaRecepcion,
-                    null,
-                    clientIdDestino
-            );
+            if (destinatarioLocal) {
+                // Broadcast o unicast local: guardar en este servidor
+                archivoRecibidoRepository.guardar(
+                        mensajeId,
+                        remitente,
+                        ipRemitente,
+                        extraerNombreBase(nombreFinalArchivo),
+                        extraerExtension(nombreFinalArchivo),
+                        rutaArchivo.toAbsolutePath().toString(),
+                        hashSha256,
+                        contenidoCifrado,
+                        payload.getTamano(),
+                        fechaRecepcion,
+                        null,
+                        clientIdDestino
+                );
 
-            GestorServidoresPeer gestorPeers = GestorServidoresPeer.getInstance();
-
-            if (clientIdDestino == null) {
-                // Broadcast: replicar a todos los peers (comportamiento original)
-                archivoRecibidoRepository.buscarPorId(mensajeId).ifPresent(modelo ->
-                        new ReplicadorArchivos().replicar(modelo, gestorPeers.getServidorId()));
-            } else {
-                // Unicast: verificar si el destinatario está en otro servidor y hacer forwarding S2S
-                boolean esLocal = gestorSesiones.existeSesionActiva(clientIdDestino);
-                if (!esLocal) {
-                    String peerDestino = encontrarPeerDeCliente(clientIdDestino, gestorPeers);
-                    if (peerDestino != null) {
-                        // Reenviar al peer que tiene al cliente con clientIdDestino seteado
-                        PayloadReplicarArchivo replicarPayload = new PayloadReplicarArchivo();
-                        replicarPayload.setId(mensajeId);
-                        replicarPayload.setRemitente(remitente);
-                        replicarPayload.setNombreArchivo(extraerNombreBase(nombreFinalArchivo));
-                        replicarPayload.setExtension(extraerExtension(nombreFinalArchivo));
-                        replicarPayload.setTamano(payload.getTamano());
-                        replicarPayload.setHashSha256(hashSha256);
-                        replicarPayload.setContenidoCifrado(contenidoCifrado);
-                        replicarPayload.setServidorOrigen(gestorPeers.getServidorId());
-                        replicarPayload.setClientIdDestino(clientIdDestino);
-
-                        Mensaje<PayloadReplicarArchivo> mensajePeer = new Mensaje<>();
-                        mensajePeer.setTipo(TipoMensaje.REQUEST);
-                        mensajePeer.setAccion(Accion.REPLICAR_ARCHIVO);
-                        mensajePeer.setMetadata(crearMetadataRespuesta());
-                        mensajePeer.setPayload(replicarPayload);
-
-                        gestorPeers.enviarAPeer(peerDestino, mensajePeer);
-                        LOGGER.info(() -> "Archivo unicast reenviado al peer " + peerDestino
-                                + " para entrega a " + clientIdDestino + " | " + nombreFinalArchivo);
-                    } else {
-                        LOGGER.warning(() -> "Destinatario " + clientIdDestino
-                                + " no encontrado en peers, archivo guardado localmente | " + nombreFinalArchivo);
-                    }
+                if (!esUnicast) {
+                    // Broadcast: replicar a todos los peers
+                    archivoRecibidoRepository.buscarPorId(mensajeId).ifPresent(modelo ->
+                            new ReplicadorArchivos().replicar(modelo, gestorPeers.getServidorId()));
+                    LOGGER.info(() -> "Archivo broadcast replicado a peers | " + nombreFinalArchivo);
                 } else {
                     LOGGER.info(() -> "Archivo unicast para [" + clientIdDestino
-                            + "] guardado — destinatario es local | " + nombreFinalArchivo);
+                            + "] guardado localmente | " + nombreFinalArchivo);
+                }
+            } else {
+                // Unicast para cliente en otro servidor: hacer forwarding S2S sin persistir aquí
+                // El archivo físico ya está en disco (necesario para leerlo), pero NO se registra en DB
+                // para no contaminar el historial local con archivos que no nos corresponden.
+                final String peerFinal = peerDestinoId;
+                PayloadReplicarArchivo replicarPayload = new PayloadReplicarArchivo();
+                replicarPayload.setId(mensajeId);
+                replicarPayload.setRemitente(remitente);
+                replicarPayload.setNombreArchivo(extraerNombreBase(nombreFinalArchivo));
+                replicarPayload.setExtension(extraerExtension(nombreFinalArchivo));
+                replicarPayload.setTamano(payload.getTamano());
+                replicarPayload.setHashSha256(hashSha256);
+                replicarPayload.setContenidoCifrado(contenidoCifrado);
+                replicarPayload.setServidorOrigen(gestorPeers.getServidorId());
+                replicarPayload.setClientIdDestino(clientIdDestino);
+
+                Mensaje<PayloadReplicarArchivo> mensajePeer = new Mensaje<>();
+                mensajePeer.setTipo(TipoMensaje.REQUEST);
+                mensajePeer.setAccion(Accion.REPLICAR_ARCHIVO);
+                mensajePeer.setMetadata(crearMetadataRespuesta());
+                mensajePeer.setPayload(replicarPayload);
+
+                boolean ok = gestorPeers.enviarAPeer(peerFinal, mensajePeer);
+                if (ok) {
+                    LOGGER.info(() -> "Archivo unicast forwarded al peer " + peerFinal
+                            + " para entrega a [" + clientIdDestino + "] | " + nombreFinalArchivo);
+                    // Limpiar el archivo temporal del disco de este servidor (ya fue enviado al peer correcto)
+                    try {
+                        Files.deleteIfExists(rutaArchivo);
+                        LOGGER.fine(() -> "Archivo temporal eliminado tras forwarding: " + rutaArchivo);
+                    } catch (IOException ex) {
+                        LOGGER.warning(() -> "No se pudo eliminar archivo temporal tras forwarding: " + rutaArchivo);
+                    }
+                } else {
+                    // Forwarding falló: guardar localmente como fallback
+                    LOGGER.warning(() -> "Forwarding al peer " + peerFinal + " falló — guardando localmente como fallback");
+                    archivoRecibidoRepository.guardar(
+                            mensajeId,
+                            remitente,
+                            ipRemitente,
+                            extraerNombreBase(nombreFinalArchivo),
+                            extraerExtension(nombreFinalArchivo),
+                            rutaArchivo.toAbsolutePath().toString(),
+                            hashSha256,
+                            contenidoCifrado,
+                            payload.getTamano(),
+                            fechaRecepcion,
+                            null,
+                            clientIdDestino
+                    );
                 }
             }
 
             LOGGER.info(() -> "Archivo recibido: " + nombreFinalArchivo + " desde " + remitente + " ("
                     + ipRemitente + ") | Hash: " + hashSha256);
             System.out.println("[SERVIDOR] Archivo recibido de " + remitente + " (" + ipRemitente + "): "
-                    + rutaArchivo.toAbsolutePath());
+                    + payload.getNombre());
 
-            return crearRespuestaExitosa(nombreFinalArchivo, rutaArchivo);
+            return crearRespuestaExitosa(payload.getNombre(),
+                    destinatarioLocal ? Path.of("archivos-recibidos").resolve(payload.getNombre()) : Path.of(payload.getNombre()));
         } catch (IOException e) {
             LOGGER.severe(() -> "No fue posible guardar el archivo " + payload.getNombre() + ": " + e.getMessage());
             throw new IllegalStateException("No fue posible guardar el archivo recibido", e);

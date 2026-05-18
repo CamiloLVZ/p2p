@@ -54,6 +54,36 @@ public class ReplicadorArchivos {
         replicarPorStream(archivo, servidorId, peers);
         
     }
+
+    /**
+     * Streams a single file to a specific peer (used during state sync).
+     * Fire-and-forget — runs in background via STREAM_EXECUTOR.
+     *
+     * @param archivo    the file record whose bytes need to be transferred
+     * @param servidorId this server's own ID
+     * @param peer       the specific peer to stream to
+     */
+    public void replicarAPeer(ArchivoRecibidoModel archivo, String servidorId, ConexionPeer peer) {
+        GestorServidoresPeer peers = GestorServidoresPeer.getInstance();
+
+        PayloadReplicarArchivoStream payload = new PayloadReplicarArchivoStream();
+        payload.setId(archivo.getId());
+        payload.setNombreArchivo(archivo.getNombreArchivo());
+        payload.setExtension(archivo.getExtension());
+        payload.setTamano(archivo.getTamano());
+        payload.setHashSha256(archivo.getHashSha256());
+        payload.setServidorOrigen(servidorId);
+        payload.setRemitente(archivo.getRemitente());
+
+        Mensaje<PayloadReplicarArchivoStream> msg = buildMensaje(Accion.REPLICAR_ARCHIVO_STREAM, payload);
+        boolean ok = peers.enviarAPeer(peer.getConfig().getServidorId(), msg);
+        if (ok) {
+            streamArchivoPeer(archivo, peer);
+        } else {
+            LOGGER.warning(() -> "No se pudo notificar stream S2S al peer: " + peer.getConfig().getServidorId()
+                    + " para archivo: " + archivo.getNombreArchivo());
+        }
+    }
     // -------------------------------------------------------------------------
     // Stream replication (large files)
     // -------------------------------------------------------------------------

@@ -25,5 +25,6 @@ public enum Accion {
     REPLICAR_CLIENTES,
     ENTREGAR_MENSAJE,
     LISTAR_LOGS_REMOTO,
-    ESTADO_SERVIDOR
+    ESTADO_SERVIDOR,
+    SINCRONIZAR_ESTADO      // S2S — sincronizacion completa al reconectarse un peer
 }

@@ -21,6 +21,7 @@ import com.arquitectura.dominio.handlers.ReplicarArchivoHandler;
 import com.arquitectura.dominio.handlers.ReplicarArchivoStreamHandler;
 import com.arquitectura.dominio.handlers.ReplicarClientesHandler;
 import com.arquitectura.dominio.handlers.ReplicarMensajeHandler;
+import com.arquitectura.dominio.handlers.SincronizarEstadoHandler;
 import com.arquitectura.mensajeria.enums.Accion;
 
 public class MensajeRouterFactory {
@@ -51,6 +52,7 @@ public class MensajeRouterFactory {
         router.registrarHandler(Accion.LISTAR_SERVIDORES,        new ListarServidoresHandler());
         router.registrarHandler(Accion.ESTADO_SERVIDOR,          new EstadoServidorHandler());
         router.registrarHandler(Accion.LISTAR_LOGS_REMOTO,       new ListarLogsRemotoHandler());
+        router.registrarHandler(Accion.SINCRONIZAR_ESTADO,       new SincronizarEstadoHandler());
 
         return router;
     }
