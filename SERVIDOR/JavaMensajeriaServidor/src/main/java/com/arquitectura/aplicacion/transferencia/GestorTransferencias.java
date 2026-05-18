@@ -162,7 +162,7 @@ public class GestorTransferencias {
 
             LOGGER.info(() -> "Replicación S2S finalizada: " + transferId
                     + " | archivo: " + nombreFinal
-                    + " | bytes: " + bytes.length
+                    + " | bytes: " + estado.getTamanoTotal()
                     + " | origen: " + servidorOrigen);
 
         } catch (IOException e) {
