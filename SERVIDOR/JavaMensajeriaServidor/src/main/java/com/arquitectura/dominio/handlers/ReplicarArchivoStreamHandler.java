@@ -2,6 +2,8 @@ package com.arquitectura.dominio.handlers;
 
 import com.arquitectura.aplicacion.router.Handler;
 import com.arquitectura.aplicacion.transferencia.GestorTransferencias;
+import com.arquitectura.dominio.repositorios.ArchivoRecibidoRepository;
+import com.arquitectura.dominio.repositorios.JpaArchivoRecibidoRepository;
 import com.arquitectura.mensajeria.ErrorDetalle;
 import com.arquitectura.mensajeria.Mensaje;
 import com.arquitectura.mensajeria.Metadata;
@@ -14,6 +16,7 @@ import com.arquitectura.mensajeria.payload.PayloadReplicarArchivoStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -31,6 +34,7 @@ public class ReplicarArchivoStreamHandler implements Handler<PayloadReplicarArch
     private static final Path DIRECTORIO_DESTINO = Path.of("archivos-recibidos");
 
     private final GestorTransferencias gestorTransferencias = GestorTransferencias.getInstance();
+    private final ArchivoRecibidoRepository archivoRepo = new JpaArchivoRecibidoRepository();
 
     @Override
     public Respuesta<?> handle(Mensaje<PayloadReplicarArchivoStream> mensaje) {
@@ -41,6 +45,13 @@ public class ReplicarArchivoStreamHandler implements Handler<PayloadReplicarArch
 
         String transferId = payload.getId();
 
+        // Idempotencia: si ya está en DB, confirmar sin crear nada
+        if (archivoRepo.existePorId(transferId)) {
+            LOGGER.fine(() -> "Archivo ya persistido en DB, confirmando sin re-transferir: " + transferId);
+            return crearRespuestaExitosa(transferId);
+        }
+
+        // Si ya hay una transferencia activa en memoria para este id, confirmar
         if (gestorTransferencias.existe(transferId)) {
             LOGGER.fine(() -> "Transferencia S2S ya registrada, confirmando: " + transferId);
             return crearRespuestaExitosa(transferId);
@@ -49,9 +60,16 @@ public class ReplicarArchivoStreamHandler implements Handler<PayloadReplicarArch
         try {
             Files.createDirectories(DIRECTORIO_DESTINO);
             Path rutaTemporal = DIRECTORIO_DESTINO.resolve(transferId + ".tmp");
-            Files.createFile(rutaTemporal);
 
-            // Estimacion: si tamano > 0 usar tamano, chunks = 1 (se ajusta con FinalizarStream)
+            // Si el .tmp existe (transferencia anterior interrumpida), truncarlo y reutilizarlo
+            // en lugar de fallar con FileAlreadyExistsException
+            if (Files.exists(rutaTemporal)) {
+                LOGGER.warning(() -> "Archivo .tmp ya existe, se trunca y reutiliza: " + rutaTemporal);
+                Files.newOutputStream(rutaTemporal, StandardOpenOption.TRUNCATE_EXISTING).close();
+            } else {
+                Files.createFile(rutaTemporal);
+            }
+
             long totalChunks = payload.getTamano() > 0 ? Math.max(1, payload.getTamano() / (64 * 1024)) : 1;
 
             gestorTransferencias.registrarS2S(
