@@ -102,7 +102,8 @@ public class FinalizarStreamHandler implements Handler<PayloadFinalizarStream> {
                     "",
                     estado.getTamanoTotal(),
                     LocalDateTime.now(),
-                    null
+                    null,
+                    estado.getClientIdDestino()   // null = broadcast, valor = unicast
             );
 
             // Replication — fire-and-forget (solo si no es unicast a cliente específico)
