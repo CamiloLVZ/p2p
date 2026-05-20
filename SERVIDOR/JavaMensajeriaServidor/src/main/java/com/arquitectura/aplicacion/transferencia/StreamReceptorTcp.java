@@ -100,10 +100,20 @@ public class StreamReceptorTcp {
 
                 EstadoTransferencia estado = gestorTransferencias.obtener(transferId.trim());
                 if (estado == null) {
-                    LOGGER.warning(() -> "StreamReceptorTcp: transferId no encontrado: " + transferId);
-                    os.write(NACK);
+                    // transferId desconocido (ej: archivo ya persistido en DB, sync redundante).
+                    // Drenar los bytes del chunk silenciosamente y responder ACK para que el
+                    // emisor no falle — no hay nada que hacer con estos datos.
+                    LOGGER.fine(() -> "StreamReceptorTcp: transferId desconocido, drenando chunk silenciosamente: " + transferId.trim());
+                    byte[] drainBuf = new byte[chunkSize];
+                    int drained = 0;
+                    while (drained < chunkSize) {
+                        int n = is.read(drainBuf, drained, chunkSize - drained);
+                        if (n < 0) break;
+                        drained += n;
+                    }
+                    os.write(ACK);
                     os.flush();
-                    break;
+                    continue;
                 }
 
                 if (estado.isEsReplicacionS2S()) {
