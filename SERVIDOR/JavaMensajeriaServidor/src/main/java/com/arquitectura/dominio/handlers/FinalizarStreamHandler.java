@@ -10,7 +10,6 @@ import com.arquitectura.aplicacion.transferencia.GestorTransferencias;
 import com.arquitectura.aplicacion.transferencia.GestorTransferencias.EstadoTransferencia;
 import com.arquitectura.dominio.repositorios.ArchivoRecibidoRepository;
 import com.arquitectura.dominio.repositorios.JpaArchivoRecibidoRepository;
-import com.arquitectura.infraestructura.seguridad.CryptoUtil;
 import com.arquitectura.mensajeria.ErrorDetalle;
 import com.arquitectura.mensajeria.Mensaje;
 import com.arquitectura.mensajeria.Metadata;
@@ -19,6 +18,8 @@ import com.arquitectura.mensajeria.enums.Accion;
 import com.arquitectura.mensajeria.enums.Estado;
 import com.arquitectura.mensajeria.enums.TipoMensaje;
 import com.arquitectura.mensajeria.payload.PayloadFinalizarStream;
+import com.arquitectura.mensajeria.payload.PayloadReplicarArchivo;
+import com.arquitectura.mensajeria.payload.PayloadClienteRemoto;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -106,13 +107,50 @@ public class FinalizarStreamHandler implements Handler<PayloadFinalizarStream> {
                     estado.getClientIdDestino()   // null = broadcast, valor = unicast
             );
 
-            // Replication — fire-and-forget (solo si no es unicast a cliente específico)
-            if (estado.getClientIdDestino() == null) {
+            // Replication / forwarding
+            String clientIdDestino = estado.getClientIdDestino();
+            GestorServidoresPeer gestorPeers = GestorServidoresPeer.getInstance();
+
+            if (clientIdDestino == null) {
+                // Broadcast: replicar a todos los peers
                 repositorio.buscarPorId(transferId).ifPresent(modelo ->
-                        new ReplicadorArchivos().replicar(modelo, GestorServidoresPeer.getInstance().getServidorId()));
+                        new ReplicadorArchivos().replicar(modelo, gestorPeers.getServidorId()));
             } else {
-                LOGGER.info(() -> "Stream unicast a [" + estado.getClientIdDestino()
-                        + "] — replicación S2S omitida para transferencia " + transferId);
+                // Unicast: reenviar solo al peer que tiene al destinatario
+                boolean destinatarioLocal = gestorSesiones.existeSesionActiva(clientIdDestino);
+                if (!destinatarioLocal) {
+                    String peerDestino = encontrarPeerDeCliente(clientIdDestino, gestorPeers);
+                    if (peerDestino != null) {
+                        // Forwarding S2S — enviar solo al peer correcto con clientIdDestino preservado
+                        repositorio.buscarPorId(transferId).ifPresent(modelo -> {
+                            PayloadReplicarArchivo replicarPayload = new PayloadReplicarArchivo();
+                            replicarPayload.setId(modelo.getId());
+                            replicarPayload.setRemitente(modelo.getRemitente());
+                            replicarPayload.setNombreArchivo(modelo.getNombreArchivo());
+                            replicarPayload.setExtension(modelo.getExtension());
+                            replicarPayload.setTamano(modelo.getTamano());
+                            replicarPayload.setHashSha256(modelo.getHashSha256());
+                            replicarPayload.setContenidoCifrado(modelo.getContenidoCifrado());
+                            replicarPayload.setServidorOrigen(gestorPeers.getServidorId());
+                            replicarPayload.setClientIdDestino(clientIdDestino);
+
+                            Mensaje<PayloadReplicarArchivo> msgPeer = new Mensaje<>();
+                            msgPeer.setTipo(TipoMensaje.REQUEST);
+                            msgPeer.setAccion(Accion.REPLICAR_ARCHIVO);
+                            msgPeer.setMetadata(crearMetadata());
+                            msgPeer.setPayload(replicarPayload);
+
+                            gestorPeers.enviarAPeer(peerDestino, msgPeer);
+                            LOGGER.info(() -> "Stream unicast forwarded al peer " + peerDestino
+                                    + " para entrega a [" + clientIdDestino + "] | " + modelo.getNombreArchivo());
+                        });
+                    } else {
+                        LOGGER.warning(() -> "Destinatario [" + clientIdDestino
+                                + "] no encontrado en peers — archivo guardado localmente como fallback");
+                    }
+                } else {
+                    LOGGER.info(() -> "Destinatario [" + clientIdDestino + "] es local — sin forwarding S2S");
+                }
             }
 
             gestorTransferencias.eliminar(transferId);
@@ -204,5 +242,14 @@ public class FinalizarStreamHandler implements Handler<PayloadFinalizarStream> {
     private int puertoRemitente() {
         Integer p = ContextoSolicitud.obtenerPuertoRemitente();
         return p == null ? -1 : p;
+    }
+
+    private String encontrarPeerDeCliente(String username, GestorServidoresPeer gestorPeers) {
+        for (PayloadClienteRemoto cliente : gestorPeers.obtenerTodosClientesRemotos()) {
+            if (username.equalsIgnoreCase(cliente.getUsername())) {
+                return cliente.getServidorOrigen();
+            }
+        }
+        return null;
     }
 }
