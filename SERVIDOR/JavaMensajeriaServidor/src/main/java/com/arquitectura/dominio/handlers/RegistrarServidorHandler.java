@@ -9,6 +9,7 @@ import com.arquitectura.dominio.modelo.MensajeModel;
 import com.arquitectura.dominio.repositorios.ArchivoRecibidoRepository;
 import com.arquitectura.dominio.repositorios.JpaArchivoRecibidoRepository;
 import com.arquitectura.dominio.repositorios.JpaMensajeRepository;
+import com.arquitectura.dominio.repositorios.JpaPeerConocidoRepository;
 import com.arquitectura.dominio.repositorios.MensajeRepository;
 import com.arquitectura.mensajeria.Mensaje;
 import com.arquitectura.mensajeria.Metadata;
@@ -46,6 +47,7 @@ public class RegistrarServidorHandler implements Handler<PayloadRegistrarServido
 
     private final MensajeRepository mensajeRepo = new JpaMensajeRepository();
     private final ArchivoRecibidoRepository archivoRepo = new JpaArchivoRecibidoRepository();
+    private final JpaPeerConocidoRepository peerRepo = new JpaPeerConocidoRepository();
 
     @Override
     public Respuesta<?> handle(Mensaje<PayloadRegistrarServidor> mensaje) {
@@ -61,6 +63,11 @@ public class RegistrarServidorHandler implements Handler<PayloadRegistrarServido
         // Marcar el peer como conectado — registrar dinámicamente si no estaba en config
         GestorServidoresPeer gestor = GestorServidoresPeer.getInstance();
         gestor.marcarPeerConectado(servidorId, payload.getHost(), payload.getPuerto());
+
+        // Persistir peer en DB para recordarlo entre reinicios
+        if (payload.getHost() != null && !payload.getHost().isBlank()) {
+            peerRepo.guardarOActualizar(servidorId, payload.getHost(), payload.getPuerto());
+        }
 
         LOGGER.info(() -> "Peer registrado: " + servidorId
                 + " | host=" + payload.getHost()

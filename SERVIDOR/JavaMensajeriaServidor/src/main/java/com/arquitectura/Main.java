@@ -8,6 +8,8 @@ import com.arquitectura.aplicacion.router.MensajeRouterFactory;
 import com.arquitectura.aplicacion.sesion.GestorServidoresPeer;
 import com.arquitectura.aplicacion.sesion.GestorSesiones;
 import com.arquitectura.aplicacion.sesion.PeerConfig;
+import com.arquitectura.dominio.modelo.PeerConocidoModel;
+import com.arquitectura.dominio.repositorios.JpaPeerConocidoRepository;
 import com.arquitectura.comun.dto.PaqueteDatos;
 import com.arquitectura.infraestructura.concurrencia.ObjectPool;
 import com.arquitectura.infraestructura.logs.LogConfig;
@@ -64,15 +66,31 @@ public class Main {
                 for (String entry : peersRaw.split(",")) {
                     String[] parts = entry.trim().split(":");
                     if (parts.length == 3) {
-                        // formato: id:host:port
                         peerConfigs.add(new PeerConfig(parts[0].trim(), parts[1].trim(),
                                 Integer.parseInt(parts[2].trim())));
                     } else if (parts.length == 2) {
-                        // formato: host:port (id = host)
                         peerConfigs.add(new PeerConfig(parts[0].trim(), parts[0].trim(),
                                 Integer.parseInt(parts[1].trim())));
                     }
                 }
+            }
+
+            // Fusionar con peers conocidos persistidos en DB (sobreviven reinicios)
+            // Los del properties tienen prioridad si el servidorId ya está en la lista
+            try {
+                List<PeerConocidoModel> peersEnDb = new JpaPeerConocidoRepository().listarTodos();
+                java.util.Set<String> idsYaAgregados = new java.util.HashSet<>();
+                for (PeerConfig pc : peerConfigs) idsYaAgregados.add(pc.getServidorId());
+                for (PeerConocidoModel p : peersEnDb) {
+                    if (!idsYaAgregados.contains(p.getServidorId())
+                            && !p.getServidorId().equals(servidorId)) {
+                        peerConfigs.add(new PeerConfig(p.getServidorId(), p.getHost(), p.getPuerto()));
+                        LOGGER.info(() -> "Peer recuperado de DB: " + p.getServidorId()
+                                + " @ " + p.getHost() + ":" + p.getPuerto());
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.warning("No se pudieron recuperar peers desde DB: " + e.getMessage());
             }
 
             // server.host permite declarar la IP pública explícitamente.

@@ -8,6 +8,7 @@
         <class>com.arquitectura.dominio.modelo.MensajeModel</class>
         <class>com.arquitectura.dominio.modelo.ArchivoRecibidoModel</class>
         <class>com.arquitectura.dominio.modelo.LogServidorModel</class>
+        <class>com.arquitectura.dominio.modelo.PeerConocidoModel</class>
         <properties>
             <property name="hibernate.archive.autodetection" value="class"/>
         </properties>
