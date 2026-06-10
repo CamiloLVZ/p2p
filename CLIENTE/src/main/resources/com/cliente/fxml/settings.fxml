@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cliente.presentation.controller.SettingsController"
+      styleClass="view-root" spacing="24">
+    <padding><Insets top="32" right="32" bottom="32" left="32"/></padding>
+
+    <!-- Header -->
+    <VBox spacing="4">
+        <Label text="Configuración" styleClass="view-title"/>
+        <Label text="La configuración del servicio de clasificación de géneros es gestionada por el servidor."
+               styleClass="view-subtitle"/>
+    </VBox>
+
+    <!-- Info card -->
+    <VBox styleClass="info-card" spacing="16" maxWidth="560">
+        <Label text="🎵  Servicio de Géneros Musicales (IA)" styleClass="info-card-status"/>
+        <Label text="El servidor Java actúa como proxy hacia el servicio Python (FastAPI). No se requiere configuración adicional en el cliente."
+               styleClass="view-subtitle" wrapText="true"/>
+    </VBox>
+
+</VBox>

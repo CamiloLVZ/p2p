@@ -1,0 +1,14 @@
+# Compiled output
+**/target/
+
+# Database files
+**/*.mv.db
+**/*.trace.db
+
+# IntelliJ IDEA
+**/.idea/
+**/*.iml
+
+# OS
+.DS_Store
+Thumbs.db

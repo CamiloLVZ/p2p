@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cliente.presentation.controller.ServidoresController"
+      styleClass="view-root" spacing="20">
+    <padding><Insets top="32" right="32" bottom="32" left="32"/></padding>
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <VBox spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Servidores Peer" styleClass="view-title"/>
+            <Label text="Servidores conocidos en la federación distribuida."
+                   styleClass="view-subtitle"/>
+        </VBox>
+        <Label fx:id="statusLabel" styleClass="status-label"/>
+        <Button fx:id="refreshButton" text="↻  Actualizar"
+                onAction="#handleRefresh" styleClass="btn-secondary"/>
+    </HBox>
+
+    <!-- Table -->
+    <TableView fx:id="servidoresTable" VBox.vgrow="ALWAYS" styleClass="data-table">
+        <columns>
+            <TableColumn fx:id="colId"     text="ID SERVIDOR"  prefWidth="200"/>
+            <TableColumn fx:id="colHost"   text="Host"         prefWidth="180"/>
+            <TableColumn fx:id="colPuerto" text="Puerto"       prefWidth="90"/>
+            <TableColumn fx:id="colEstado" text="Estado"       prefWidth="130"/>
+        </columns>
+    </TableView>
+
+</VBox>

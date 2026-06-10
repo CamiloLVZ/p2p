@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cliente.presentation.controller.SendMessageDialogController"
+      styleClass="dialog-root" spacing="16" prefWidth="460" prefHeight="320">
+    <padding><Insets top="24" right="28" bottom="24" left="28"/></padding>
+
+    <Label text="Enviar Mensaje" styleClass="dialog-title"/>
+
+    <Separator/>
+
+    <VBox spacing="8" VBox.vgrow="ALWAYS">
+        <Label text="Contenido del Mensaje" styleClass="field-label"/>
+        <TextArea fx:id="messageArea"
+                  promptText="Escriba su mensaje aquí..."
+                  styleClass="message-textarea"
+                  wrapText="true"
+                  VBox.vgrow="ALWAYS"
+                  prefHeight="160"/>
+    </VBox>
+
+    <Label fx:id="statusLabel" styleClass="status-label" visible="false"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Cancelar" onAction="#handleCancel" styleClass="btn-outline"/>
+        <Button fx:id="sendButton" text="Enviar" onAction="#handleSend"
+                styleClass="btn-primary"/>
+    </HBox>
+
+</VBox>
